@@ -28,7 +28,7 @@ interface ChatMessage {
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages } = await request.json();
+    const { messages, relationshipContext } = await request.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -55,13 +55,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build personalized system prompt with relationship context
+    let personalizedPrompt = SYSTEM_PROMPT;
+    if (relationshipContext && relationshipContext.trim()) {
+      personalizedPrompt += `\n\nAdditional Relationship Context:\n${relationshipContext.trim()}\n\nUse this context to provide more personalized and relevant advice to Emma. Reference specific details from this context when appropriate, but always maintain empathy and understanding.`;
+    }
+
     // Format messages for Gemini API
     // Gemini uses 'user' and 'model' roles
     // Include system prompt as the first message to guide the model's behavior
     const formattedMessages = [
       {
         role: 'user' as const,
-        parts: [{ text: SYSTEM_PROMPT }],
+        parts: [{ text: personalizedPrompt }],
       },
       {
         role: 'model' as const,

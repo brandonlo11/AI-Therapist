@@ -21,8 +21,17 @@ export default function ChatInterface() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showContextModal, setShowContextModal] = useState(false);
+  const [relationshipContext, setRelationshipContext] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('relationshipContext');
+      return saved || '';
+    }
+    return '';
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const contextTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -31,6 +40,16 @@ export default function ChatInterface() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    // Load saved context from localStorage
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('relationshipContext');
+      if (saved) {
+        setRelationshipContext(saved);
+      }
+    }
+  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -57,6 +76,7 @@ export default function ChatInterface() {
             role: msg.role,
             content: msg.content,
           })),
+          relationshipContext: relationshipContext,
         }),
       });
 
@@ -101,6 +121,15 @@ export default function ChatInterface() {
     textareaRef.current?.focus();
   };
 
+  const handleSaveContext = () => {
+    if (contextTextareaRef.current) {
+      const context = contextTextareaRef.current.value;
+      setRelationshipContext(context);
+      localStorage.setItem('relationshipContext', context);
+      setShowContextModal(false);
+    }
+  };
+
   return (
     <div className="chat-container">
       {/* Header */}
@@ -131,7 +160,51 @@ export default function ChatInterface() {
             <p>Your personal guide for relationships and emotional growth</p>
           </div>
         </div>
+        <button 
+          className="context-button"
+          onClick={() => setShowContextModal(true)}
+          title="Edit relationship context"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+        </button>
       </header>
+
+      {/* Context Modal */}
+      {showContextModal && (
+        <div className="modal-overlay" onClick={() => setShowContextModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Relationship Context</h2>
+              <button className="modal-close" onClick={() => setShowContextModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p className="context-description">
+                Share details about your relationship with Emma to help me provide more personalized advice. 
+                For example: how long you've been together, your communication styles, common challenges, 
+                what works well, or anything else that would help me understand your relationship better.
+              </p>
+              <textarea
+                ref={contextTextareaRef}
+                className="context-textarea"
+                placeholder="E.g., We've been together for 2 years. Emma is more expressive with emotions while I tend to be more reserved. We sometimes struggle with communication during conflicts..."
+                defaultValue={relationshipContext}
+                rows={8}
+              />
+            </div>
+            <div className="modal-footer">
+              <button className="modal-button-secondary" onClick={() => setShowContextModal(false)}>
+                Cancel
+              </button>
+              <button className="modal-button-primary" onClick={handleSaveContext}>
+                Save Context
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="messages-container">
@@ -312,12 +385,16 @@ export default function ChatInterface() {
           padding: 1.25rem 1.5rem;
           background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
           border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
         }
 
         .header-content {
           display: flex;
           align-items: center;
           gap: 1rem;
+          flex: 1;
         }
 
         .header-therapist-avatar {
@@ -695,6 +772,168 @@ export default function ChatInterface() {
           }
         }
 
+        .context-button {
+          background: rgba(102, 126, 234, 0.1);
+          border: 1px solid rgba(102, 126, 234, 0.2);
+          border-radius: 0.5rem;
+          padding: 0.5rem;
+          cursor: pointer;
+          color: #667eea;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+        }
+
+        .context-button:hover {
+          background: rgba(102, 126, 234, 0.2);
+          transform: scale(1.05);
+        }
+
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          animation: fadeIn 0.2s ease-in;
+        }
+
+        .modal-content {
+          background: white;
+          border-radius: 1rem;
+          width: 90%;
+          max-width: 600px;
+          max-height: 80vh;
+          display: flex;
+          flex-direction: column;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+          animation: slideUp 0.3s ease-out;
+        }
+
+        .modal-header {
+          padding: 1.5rem;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .modal-header h2 {
+          margin: 0;
+          font-size: 1.25rem;
+          color: #2d3748;
+        }
+
+        .modal-close {
+          background: none;
+          border: none;
+          font-size: 1.5rem;
+          color: #718096;
+          cursor: pointer;
+          padding: 0;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 0.25rem;
+          transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+          background: rgba(0, 0, 0, 0.05);
+          color: #2d3748;
+        }
+
+        .modal-body {
+          padding: 1.5rem;
+          overflow-y: auto;
+          flex: 1;
+        }
+
+        .context-description {
+          color: #718096;
+          font-size: 0.875rem;
+          margin-bottom: 1rem;
+          line-height: 1.5;
+        }
+
+        .context-textarea {
+          width: 100%;
+          padding: 0.875rem;
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          border-radius: 0.5rem;
+          font-size: 0.9375rem;
+          font-family: inherit;
+          resize: vertical;
+          min-height: 150px;
+          line-height: 1.5;
+          color: #2d3748;
+        }
+
+        .context-textarea:focus {
+          outline: none;
+          border-color: #667eea;
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .modal-footer {
+          padding: 1.5rem;
+          border-top: 1px solid rgba(0, 0, 0, 0.1);
+          display: flex;
+          justify-content: flex-end;
+          gap: 0.75rem;
+        }
+
+        .modal-button-secondary {
+          padding: 0.625rem 1.25rem;
+          background: #f7fafc;
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          border-radius: 0.5rem;
+          color: #2d3748;
+          cursor: pointer;
+          font-size: 0.9375rem;
+          transition: all 0.2s;
+        }
+
+        .modal-button-secondary:hover {
+          background: #edf2f7;
+        }
+
+        .modal-button-primary {
+          padding: 0.625rem 1.25rem;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border: none;
+          border-radius: 0.5rem;
+          color: white;
+          cursor: pointer;
+          font-size: 0.9375rem;
+          font-weight: 500;
+          transition: all 0.2s;
+        }
+
+        .modal-button-primary:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
         @media (max-width: 768px) {
           .chat-container {
             max-width: 100%;
@@ -710,6 +949,20 @@ export default function ChatInterface() {
 
           .header-content p {
             font-size: 0.8125rem;
+          }
+
+          .chat-header {
+            flex-wrap: wrap;
+          }
+
+          .context-button {
+            margin-top: 0.5rem;
+            width: 100%;
+          }
+
+          .modal-content {
+            width: 95%;
+            max-height: 90vh;
           }
         }
       `}</style>
