@@ -7,17 +7,38 @@ import remarkGfm from 'remark-gfm';
 interface Message {
   role: 'user' | 'assistant';
   content: string;
-  timestamp: Date;
+  timestamp: string;
 }
 
+interface Conversation {
+  id: string;
+  title: string;
+  messages: Message[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+const createInitialConversation = (): Conversation => {
+  const now = new Date().toISOString();
+  return {
+    id: `conv-${now}`,
+    title: "New chat",
+    createdAt: now,
+    updatedAt: now,
+    messages: [
+      {
+        role: 'assistant',
+        content:
+          "Hello Emma! I'm here to help you with relationship advice, communication, and emotional support. What's on your mind today?",
+        timestamp: now,
+      },
+    ],
+  };
+};
+
 export default function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: "Hello Emma! I'm here to help you with relationship advice, communication, and emotional support. What's on your mind today?",
-      timestamp: new Date(),
-    },
-  ]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +61,10 @@ export default function ChatInterface() {
   const contextTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const activeConversation =
+    conversations.find((c) => c.id === activeConversationId) || conversations[0] || null;
+  const messages = activeConversation?.messages ?? [];
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -51,6 +76,30 @@ export default function ChatInterface() {
   useEffect(() => {
     // Load saved context and avatar from localStorage
     if (typeof window !== 'undefined') {
+      // conversations
+      const storedConversations = localStorage.getItem('conversations');
+      if (storedConversations) {
+        try {
+          const parsed: Conversation[] = JSON.parse(storedConversations);
+          if (parsed.length > 0) {
+            setConversations(parsed);
+            setActiveConversationId(parsed[0].id);
+          } else {
+            const initial = createInitialConversation();
+            setConversations([initial]);
+            setActiveConversationId(initial.id);
+          }
+        } catch {
+          const initial = createInitialConversation();
+          setConversations([initial]);
+          setActiveConversationId(initial.id);
+        }
+      } else {
+        const initial = createInitialConversation();
+        setConversations([initial]);
+        setActiveConversationId(initial.id);
+      }
+
       const saved = localStorage.getItem('relationshipContext');
       if (saved) {
         setRelationshipContext(saved);
@@ -61,6 +110,12 @@ export default function ChatInterface() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (conversations.length === 0) return;
+    localStorage.setItem('conversations', JSON.stringify(conversations));
+  }, [conversations]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -96,13 +151,59 @@ export default function ChatInterface() {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
+    const now = new Date().toISOString();
     const userMessage: Message = {
       role: 'user',
       content: input.trim(),
-      timestamp: new Date(),
+      timestamp: now,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    // Ensure there is an active conversation and compute the messages
+    let baseMessages: Message[] = messages;
+    let targetConversationId = activeConversationId;
+
+    if (!activeConversation) {
+      const initial = createInitialConversation();
+      baseMessages = initial.messages;
+      targetConversationId = initial.id;
+      setConversations((prev) => [initial, ...prev]);
+      setActiveConversationId(initial.id);
+    }
+
+    const conversationMessages: Message[] = [...baseMessages, userMessage];
+
+    // Update conversations state with the new user message
+    setConversations((prev) => {
+      const idToUse = targetConversationId;
+      const idx = prev.findIndex((c) => c.id === idToUse);
+      if (idx === -1) {
+        const initial = createInitialConversation();
+        const updatedConv: Conversation = {
+          ...initial,
+          messages: conversationMessages,
+          title:
+            initial.title === 'New chat'
+              ? userMessage.content.slice(0, 40) || 'New chat'
+              : initial.title,
+          updatedAt: now,
+        };
+        return [updatedConv, ...prev];
+      }
+      const conv = prev[idx];
+      const updatedConv: Conversation = {
+        ...conv,
+        messages: conversationMessages,
+        title:
+          conv.title === 'New chat'
+            ? userMessage.content.slice(0, 40) || 'New chat'
+            : conv.title,
+        updatedAt: now,
+      };
+      const updated = [...prev];
+      updated[idx] = updatedConv;
+      return updated;
+    });
+
     setInput('');
     setIsLoading(true);
     setError(null);
@@ -114,7 +215,7 @@ export default function ChatInterface() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [...messages, userMessage].map((msg) => ({
+          messages: conversationMessages.map((msg) => ({
             role: msg.role,
             content: msg.content,
           })),
@@ -128,13 +229,28 @@ export default function ChatInterface() {
       }
 
       const data = await response.json();
+      const nowAssistant = new Date().toISOString();
       const assistantMessage: Message = {
         role: 'assistant',
         content: data.message,
-        timestamp: new Date(),
+        timestamp: nowAssistant,
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setConversations((prev) => {
+        const idToUse = targetConversationId ?? activeConversationId;
+        const idx = prev.findIndex((c) => c.id === idToUse);
+        if (idx === -1) return prev;
+        const conv = prev[idx];
+        const newMessages = [...conv.messages, assistantMessage];
+        const updatedConv: Conversation = {
+          ...conv,
+          messages: newMessages,
+          updatedAt: nowAssistant,
+        };
+        const updated = [...prev];
+        updated[idx] = updatedConv;
+        return updated;
+      });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);
@@ -172,10 +288,75 @@ export default function ChatInterface() {
     }
   };
 
+  const handleNewConversation = () => {
+    const initial = createInitialConversation();
+    setConversations((prev) => [initial, ...prev]);
+    setActiveConversationId(initial.id);
+    setInput('');
+    setError(null);
+  };
+
+  const handleSelectConversation = (id: string) => {
+    setActiveConversationId(id);
+    setError(null);
+    setInput('');
+  };
+
+  const handleDeleteConversation = (id: string) => {
+    setConversations((prev) => {
+      const filtered = prev.filter((c) => c.id !== id);
+      if (filtered.length === 0) {
+        const initial = createInitialConversation();
+        setActiveConversationId(initial.id);
+        return [initial];
+      }
+      if (id === activeConversationId) {
+        setActiveConversationId(filtered[0].id);
+      }
+      return filtered;
+    });
+  };
+
   return (
-    <div className="chat-container">
-      {/* Header */}
-      <header className="chat-header">
+    <div className="chat-root">
+      {/* Sidebar */}
+      <aside className="chat-sidebar">
+        <div className="sidebar-header">
+          <h2>Chats</h2>
+          <button className="new-chat-button" onClick={handleNewConversation}>
+            +
+          </button>
+        </div>
+        <div className="sidebar-list">
+          {conversations.map((conv) => (
+            <button
+              key={conv.id}
+              className={`sidebar-item ${
+                conv.id === activeConversationId ? 'sidebar-item-active' : ''
+              }`}
+              onClick={() => handleSelectConversation(conv.id)}
+            >
+              <span className="sidebar-item-title">
+                {conv.title || 'New chat'}
+              </span>
+              <button
+                className="sidebar-item-delete"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteConversation(conv.id);
+                }}
+                title="Delete chat"
+              >
+                🗑
+              </button>
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      <div className="chat-container">
+        {/* Header */}
+        <header className="chat-header">
         <div className="header-content">
           <div className="header-therapist-avatar">
             <svg width="48" height="48" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -453,15 +634,138 @@ export default function ChatInterface() {
         </div>
         <p className="input-hint">Press Enter to send, Shift+Enter for new line</p>
       </div>
+      </div>
 
       <style jsx>{`
+        .chat-root {
+          display: flex;
+          height: 100vh;
+          max-width: 1100px;
+          margin: 0 auto;
+          width: 100%;
+        }
+
+        .chat-sidebar {
+          width: 260px;
+          background: linear-gradient(135deg, #f5f7fa 0%, #e8f0f5 100%);
+          color: #2d3748;
+          display: flex;
+          flex-direction: column;
+          padding: 1rem;
+          border-right: 1px solid rgba(0, 0, 0, 0.08);
+          box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .sidebar-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 1rem;
+          padding-bottom: 0.75rem;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .sidebar-header h2 {
+          font-size: 1rem;
+          font-weight: 600;
+          margin: 0;
+          color: #2d3748;
+        }
+
+        .new-chat-button {
+          width: 32px;
+          height: 32px;
+          border-radius: 0.5rem;
+          border: 1px solid rgba(102, 126, 234, 0.2);
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          cursor: pointer;
+          font-size: 1.25rem;
+          line-height: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+          font-weight: 300;
+        }
+
+        .new-chat-button:hover {
+          transform: scale(1.05);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .sidebar-list {
+          flex: 1;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 0.375rem;
+        }
+
+        .sidebar-item {
+          width: 100%;
+          border: none;
+          background: transparent;
+          color: #2d3748;
+          padding: 0.625rem 0.75rem;
+          border-radius: 0.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          cursor: pointer;
+          font-size: 0.875rem;
+          transition: all 0.2s;
+          text-align: left;
+        }
+
+        .sidebar-item:hover {
+          background: rgba(102, 126, 234, 0.08);
+        }
+
+        .sidebar-item-active {
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+          border-left: 3px solid #667eea;
+          font-weight: 500;
+        }
+
+        .sidebar-item-title {
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          text-align: left;
+          flex: 1;
+        }
+
+        .sidebar-item-delete {
+          border: none;
+          background: transparent;
+          color: #a0aec0;
+          cursor: pointer;
+          font-size: 0.875rem;
+          padding: 0.25rem;
+          margin-left: 0.5rem;
+          border-radius: 0.25rem;
+          opacity: 0;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .sidebar-item:hover .sidebar-item-delete {
+          opacity: 1;
+        }
+
+        .sidebar-item-delete:hover {
+          background: rgba(229, 62, 62, 0.1);
+          color: #e53e3e;
+        }
+
         .chat-container {
           display: flex;
           flex-direction: column;
           height: 100vh;
-          max-width: 900px;
-          margin: 0 auto;
-          width: 100%;
+          flex: 1;
           background-color: #ffffff;
           box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.1);
         }
@@ -1122,6 +1426,15 @@ export default function ChatInterface() {
         }
 
         @media (max-width: 768px) {
+          .chat-root {
+            flex-direction: column;
+          }
+
+          .chat-sidebar {
+            width: 100%;
+            height: 180px;
+          }
+
           .chat-container {
             max-width: 100%;
           }
@@ -1144,7 +1457,7 @@ export default function ChatInterface() {
 
           .context-button {
             margin-top: 0.5rem;
-            width: 100%;
+            width: auto;
           }
 
           .modal-content {
