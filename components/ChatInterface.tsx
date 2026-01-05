@@ -14,7 +14,7 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: "Hello! I'm here to help with relationship advice, communication, and emotional support. What's on your mind today?",
+      content: "Hello Emma! I'm here to help you with relationship advice, communication, and emotional support. What's on your mind today?",
       timestamp: new Date(),
     },
   ]);
@@ -90,10 +90,10 @@ export default function ChatInterface() {
   };
 
   const examplePrompts = [
-    "How do I communicate my needs better?",
-    "How should I handle a difficult breakup?",
-    "What are healthy boundaries in a relationship?",
+    "How do I communicate my needs better in my relationship?",
+    "What are healthy boundaries I should set?",
     "How can I resolve conflicts more effectively?",
+    "How do I express my feelings without being too emotional?",
   ];
 
   const handleExampleClick = (prompt: string) => {
@@ -127,19 +127,11 @@ export default function ChatInterface() {
             </svg>
           </div>
           <div>
-            <h1>Relationship Coach</h1>
-            <p>Your compassionate guide for relationships and emotional growth</p>
+            <h1>Emma's Relationship Coach</h1>
+            <p>Your personal guide for relationships and emotional growth</p>
           </div>
         </div>
       </header>
-
-      {/* Disclaimer */}
-      <div className="disclaimer">
-        <span className="disclaimer-icon">ℹ️</span>
-        <span>
-          <strong>Note:</strong> This assistant provides general relationship advice and is not a substitute for professional counseling or therapy.
-        </span>
-      </div>
 
       {/* Messages */}
       <div className="messages-container">
@@ -253,7 +245,7 @@ export default function ChatInterface() {
           <div className="example-prompts">
             <div className="example-header">
               <span className="example-icon">💭</span>
-              <h3>Example questions you can ask</h3>
+              <h3>Example questions you can ask, Emma</h3>
             </div>
             <div className="example-list">
               {examplePrompts.map((prompt, idx) => (
@@ -280,7 +272,7 @@ export default function ChatInterface() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Share what's on your mind..."
+            placeholder="Hi Emma, what would you like to talk about today?"
             className="chat-input"
             rows={1}
             onInput={(e) => {
@@ -351,21 +343,6 @@ export default function ChatInterface() {
           font-size: 0.875rem;
           color: #718096;
           margin: 0;
-        }
-
-        .disclaimer {
-          padding: 0.875rem 1.5rem;
-          background: linear-gradient(135deg, #fff5e6 0%, #ffe0b3 100%);
-          border-bottom: 1px solid rgba(255, 193, 7, 0.2);
-          font-size: 0.8125rem;
-          color: #856404;
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-
-        .disclaimer-icon {
-          font-size: 1rem;
         }
 
         .messages-container {
