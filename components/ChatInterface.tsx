@@ -29,9 +29,16 @@ export default function ChatInterface() {
     }
     return '';
   });
+  const [userAvatar, setUserAvatar] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('userAvatar');
+    }
+    return null;
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const contextTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,14 +49,49 @@ export default function ChatInterface() {
   }, [messages]);
 
   useEffect(() => {
-    // Load saved context from localStorage
+    // Load saved context and avatar from localStorage
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('relationshipContext');
       if (saved) {
         setRelationshipContext(saved);
       }
+      const savedAvatar = localStorage.getItem('userAvatar');
+      if (savedAvatar) {
+        setUserAvatar(savedAvatar);
+      }
     }
   }, []);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      // Validate file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Image size should be less than 2MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const imageDataUrl = reader.result as string;
+        setUserAvatar(imageDataUrl);
+        localStorage.setItem('userAvatar', imageDataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setUserAvatar(null);
+    localStorage.removeItem('userAvatar');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -181,18 +223,57 @@ export default function ChatInterface() {
               <button className="modal-close" onClick={() => setShowContextModal(false)}>×</button>
             </div>
             <div className="modal-body">
-              <p className="context-description">
-                Share details about your relationship with Emma to help me provide more personalized advice. 
-                For example: how long you've been together, your communication styles, common challenges, 
-                what works well, or anything else that would help me understand your relationship better.
-              </p>
-              <textarea
-                ref={contextTextareaRef}
-                className="context-textarea"
-                placeholder="E.g., We've been together for 2 years. Emma is more expressive with emotions while I tend to be more reserved. We sometimes struggle with communication during conflicts..."
-                defaultValue={relationshipContext}
-                rows={8}
-              />
+              <div className="avatar-upload-section">
+                <label className="avatar-upload-label">Your Avatar (Emma)</label>
+                <div className="avatar-upload-container">
+                  <div className="avatar-preview">
+                    {userAvatar ? (
+                      <img src={userAvatar} alt="User avatar preview" className="avatar-preview-image" />
+                    ) : (
+                      <div className="avatar-placeholder">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                          <circle cx="12" cy="7" r="4" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="avatar-upload-buttons">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="avatar-file-input"
+                      id="avatar-upload"
+                    />
+                    <label htmlFor="avatar-upload" className="avatar-upload-button">
+                      {userAvatar ? 'Change Photo' : 'Upload Photo'}
+                    </label>
+                    {userAvatar && (
+                      <button className="avatar-remove-button" onClick={handleRemoveAvatar}>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="context-section">
+                <label className="context-label">Relationship Context</label>
+                <p className="context-description">
+                  Share details about your relationship with Emma to help me provide more personalized advice. 
+                  For example: how long you've been together, your communication styles, common challenges, 
+                  what works well, or anything else that would help me understand your relationship better.
+                </p>
+                <textarea
+                  ref={contextTextareaRef}
+                  className="context-textarea"
+                  placeholder="E.g., We've been together for 2 years. Emma is more expressive with emotions while I tend to be more reserved. We sometimes struggle with communication during conflicts..."
+                  defaultValue={relationshipContext}
+                  rows={8}
+                />
+              </div>
             </div>
             <div className="modal-footer">
               <button className="modal-button-secondary" onClick={() => setShowContextModal(false)}>
@@ -263,10 +344,14 @@ export default function ChatInterface() {
               </div>
               {message.role === 'user' && (
                 <div className="avatar user-avatar">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
+                  {userAvatar ? (
+                    <img src={userAvatar} alt="User avatar" className="avatar-image" />
+                  ) : (
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  )}
                 </div>
               )}
             </div>
@@ -487,6 +572,14 @@ export default function ChatInterface() {
         .user-avatar {
           background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
           color: white;
+          overflow: hidden;
+        }
+
+        .avatar-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 50%;
         }
 
         .message-bubble {
@@ -855,6 +948,100 @@ export default function ChatInterface() {
           padding: 1.5rem;
           overflow-y: auto;
           flex: 1;
+        }
+
+        .avatar-upload-section {
+          margin-bottom: 2rem;
+          padding-bottom: 2rem;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .avatar-upload-label,
+        .context-label {
+          display: block;
+          font-weight: 600;
+          color: #2d3748;
+          margin-bottom: 0.75rem;
+          font-size: 0.9375rem;
+        }
+
+        .avatar-upload-container {
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+        }
+
+        .avatar-preview {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          overflow: hidden;
+          background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .avatar-preview-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .avatar-placeholder {
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .avatar-upload-buttons {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .avatar-file-input {
+          display: none;
+        }
+
+        .avatar-upload-button {
+          padding: 0.5rem 1rem;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          border: none;
+          border-radius: 0.5rem;
+          cursor: pointer;
+          font-size: 0.875rem;
+          font-weight: 500;
+          transition: all 0.2s;
+          text-align: center;
+        }
+
+        .avatar-upload-button:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .avatar-remove-button {
+          padding: 0.5rem 1rem;
+          background: #f7fafc;
+          color: #e53e3e;
+          border: 1px solid rgba(229, 62, 62, 0.2);
+          border-radius: 0.5rem;
+          cursor: pointer;
+          font-size: 0.875rem;
+          transition: all 0.2s;
+        }
+
+        .avatar-remove-button:hover {
+          background: #fee;
+          border-color: #e53e3e;
+        }
+
+        .context-section {
+          margin-top: 1rem;
         }
 
         .context-description {
