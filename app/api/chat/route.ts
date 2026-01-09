@@ -28,7 +28,7 @@ interface ChatMessage {
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages, relationshipContext } = await request.json();
+    const { messages, relationshipContext, apiKey: userApiKey } = await request.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -37,12 +37,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    // Use user-provided API key, fallback to environment variable (for backward compatibility)
+    const apiKey = userApiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.error('GEMINI_API_KEY is not set');
       return NextResponse.json(
-        { error: 'API key not configured' },
-        { status: 500 }
+        { error: 'API key is required. Please enter your Gemini API key in settings.' },
+        { status: 400 }
       );
     }
 

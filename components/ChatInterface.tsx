@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -43,19 +43,9 @@ export default function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showContextModal, setShowContextModal] = useState(false);
-  const [relationshipContext, setRelationshipContext] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('relationshipContext');
-      return saved || '';
-    }
-    return '';
-  });
-  const [userAvatar, setUserAvatar] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('userAvatar');
-    }
-    return null;
-  });
+  const [userApiKey, setUserApiKey] = useState<string>('');
+  const [relationshipContext, setRelationshipContext] = useState<string>('');
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const contextTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -64,6 +54,28 @@ export default function ChatInterface() {
   const activeConversation =
     conversations.find((c) => c.id === activeConversationId) || conversations[0] || null;
   const messages = activeConversation?.messages ?? [];
+
+  const markdownComponents = useMemo(() => ({
+    p: (props: any) => (props ? <p className="markdown-p" {...props} /> : null),
+    strong: (props: any) => (props ? <strong className="markdown-strong" {...props} /> : null),
+    em: (props: any) => (props ? <em className="markdown-em" {...props} /> : null),
+    ul: (props: any) => (props ? <ul className="markdown-ul" {...props} /> : null),
+    ol: (props: any) => (props ? <ol className="markdown-ol" {...props} /> : null),
+    li: (props: any) => (props ? <li className="markdown-li" {...props} /> : null),
+    code: (props: any) => {
+      if (!props || typeof props !== 'object') return null;
+      try {
+        const { inline, children, className, ...rest } = props;
+        if (inline) {
+          return <code className="markdown-code-inline" {...rest}>{children}</code>;
+        }
+        return <code className="markdown-code-block" {...rest}>{children}</code>;
+      } catch (e) {
+        console.error('Error rendering code:', e);
+        return null;
+      }
+    },
+  }), []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -74,9 +86,11 @@ export default function ChatInterface() {
   }, [messages]);
 
   useEffect(() => {
-    // Load saved context and avatar from localStorage
-    if (typeof window !== 'undefined') {
-      // conversations
+    // Load saved data from localStorage
+    if (typeof window === 'undefined') return;
+    
+    try {
+      // Load conversations
       const storedConversations = localStorage.getItem('conversations');
       if (storedConversations) {
         try {
@@ -100,14 +114,25 @@ export default function ChatInterface() {
         setActiveConversationId(initial.id);
       }
 
+      // Load relationship context
       const saved = localStorage.getItem('relationshipContext');
       if (saved) {
         setRelationshipContext(saved);
       }
+
+      // Load avatar
       const savedAvatar = localStorage.getItem('userAvatar');
       if (savedAvatar) {
         setUserAvatar(savedAvatar);
       }
+
+      // Load API key
+      const savedApiKey = localStorage.getItem('userApiKey');
+      if (savedApiKey) {
+        setUserApiKey(savedApiKey);
+      }
+    } catch (error) {
+      console.error('Error loading from localStorage:', error);
     }
   }, []);
 
@@ -208,6 +233,13 @@ export default function ChatInterface() {
     setIsLoading(true);
     setError(null);
 
+    if (!userApiKey.trim()) {
+      setError('Please enter your Gemini API key in settings first');
+      setIsLoading(false);
+      setShowContextModal(true);
+      return;
+    }
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -220,6 +252,7 @@ export default function ChatInterface() {
             content: msg.content,
           })),
           relationshipContext: relationshipContext,
+          apiKey: userApiKey.trim(),
         }),
       });
 
@@ -284,8 +317,13 @@ export default function ChatInterface() {
       const context = contextTextareaRef.current.value;
       setRelationshipContext(context);
       localStorage.setItem('relationshipContext', context);
-      setShowContextModal(false);
     }
+    setShowContextModal(false);
+  };
+
+  const handleSaveApiKey = (key: string) => {
+    setUserApiKey(key);
+    localStorage.setItem('userApiKey', key);
   };
 
   const handleNewConversation = () => {
@@ -400,10 +438,33 @@ export default function ChatInterface() {
         <div className="modal-overlay" onClick={() => setShowContextModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Relationship Context</h2>
+              <h2>Settings</h2>
               <button className="modal-close" onClick={() => setShowContextModal(false)}>×</button>
             </div>
             <div className="modal-body">
+              <div className="api-key-section">
+                <label className="api-key-label">Gemini API Key *</label>
+                <p className="api-key-description">
+                  Enter your Google Gemini API key. Get one free at{' '}
+                  <a href="https://makersuite.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="api-key-link">
+                    Google AI Studio
+                  </a>
+                </p>
+                <input
+                  type="password"
+                  className="api-key-input"
+                  placeholder="AIzaSy..."
+                  defaultValue={userApiKey}
+                  onChange={(e) => handleSaveApiKey(e.target.value)}
+                  onBlur={(e) => handleSaveApiKey(e.target.value)}
+                />
+                {!userApiKey && (
+                  <p className="api-key-warning">
+                    ⚠️ API key is required to use the chat feature
+                  </p>
+                )}
+              </div>
+
               <div className="avatar-upload-section">
                 <label className="avatar-upload-label">Your Avatar (Emma)</label>
                 <div className="avatar-upload-container">
@@ -499,28 +560,15 @@ export default function ChatInterface() {
                 </div>
               )}
               <div className={`message-bubble ${message.role === 'user' ? 'user-bubble' : 'assistant-bubble'} ${message.role === 'assistant' ? 'therapist-bubble' : ''}`}>
-                {message.role === 'assistant' ? (
+                {message.role === 'assistant' && message.content ? (
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
-                    components={{
-                      p: ({ node, ...props }) => <p className="markdown-p" {...props} />,
-                      strong: ({ node, ...props }) => <strong className="markdown-strong" {...props} />,
-                      em: ({ node, ...props }) => <em className="markdown-em" {...props} />,
-                      ul: ({ node, ...props }) => <ul className="markdown-ul" {...props} />,
-                      ol: ({ node, ...props }) => <ol className="markdown-ol" {...props} />,
-                      li: ({ node, ...props }) => <li className="markdown-li" {...props} />,
-                      code: ({ node, inline, ...props }: any) => 
-                        inline ? (
-                          <code className="markdown-code-inline" {...props} />
-                        ) : (
-                          <code className="markdown-code-block" {...props} />
-                        ),
-                    }}
+                    components={markdownComponents}
                   >
                     {message.content}
                   </ReactMarkdown>
                 ) : (
-                  <div className="message-text">{message.content}</div>
+                  <div className="message-text">{message.content || ''}</div>
                 )}
               </div>
               {message.role === 'user' && (
@@ -1252,6 +1300,65 @@ export default function ChatInterface() {
           padding: 1.5rem;
           overflow-y: auto;
           flex: 1;
+        }
+
+        .api-key-section {
+          margin-bottom: 2rem;
+          padding-bottom: 2rem;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .api-key-label {
+          display: block;
+          font-weight: 600;
+          color: #2d3748;
+          margin-bottom: 0.5rem;
+          font-size: 0.9375rem;
+        }
+
+        .api-key-description {
+          color: #718096;
+          font-size: 0.875rem;
+          margin-bottom: 0.75rem;
+          line-height: 1.5;
+        }
+
+        .api-key-link {
+          color: #667eea;
+          text-decoration: none;
+          font-weight: 500;
+        }
+
+        .api-key-link:hover {
+          text-decoration: underline;
+        }
+
+        .api-key-input {
+          width: 100%;
+          padding: 0.875rem;
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          border-radius: 0.5rem;
+          font-size: 0.9375rem;
+          font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+          color: #2d3748;
+          background: #f7fafc;
+        }
+
+        .api-key-input:focus {
+          outline: none;
+          border-color: #667eea;
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+          background: white;
+        }
+
+        .api-key-warning {
+          margin-top: 0.5rem;
+          padding: 0.625rem;
+          background: #fff5e6;
+          color: #856404;
+          border-radius: 0.5rem;
+          font-size: 0.8125rem;
+          border: 1px solid #ffe0b3;
         }
 
         .avatar-upload-section {

@@ -116,12 +116,56 @@ The AI assistant is designed to:
 
 ## Production Deployment
 
-Before deploying to production:
+This application is ready for deployment on **Vercel** (recommended) or any platform that supports Next.js.
 
-1. Ensure your `.env.local` is not committed to version control
-2. Set environment variables in your hosting platform (Vercel, Netlify, etc.)
-3. Build the project: `npm run build`
-4. Test the production build: `npm start`
+### 🚀 Deploy to Vercel (Recommended - Easiest)
+
+**Vercel is the best choice for Next.js apps** - it's created by the Next.js team and offers seamless deployment.
+
+#### Steps:
+
+1. **Push your code to GitHub:**
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git branch -M main
+   git remote add origin <your-github-repo-url>
+   git push -u origin main
+   ```
+
+2. **Deploy to Vercel:**
+   - Go to [vercel.com](https://vercel.com)
+   - Sign up/Login with GitHub
+   - Click "New Project"
+   - Import your GitHub repository
+   - **No environment variables needed!** (Users enter their own API keys)
+   - Framework Preset: **Next.js** (auto-detected)
+   - Click "Deploy"
+   - Wait ~2-3 minutes for deployment
+
+3. **Your site is live!** Vercel will provide a URL like `your-app.vercel.app`
+
+#### Important Notes:
+- ✅ **No server-side API key required** - Users enter their own Gemini API keys in the app
+- ✅ API keys are stored securely in users' browsers (localStorage)
+- ✅ No environment variables needed to configure
+- ✅ The `vercel.json` configuration file is included for optimal deployment
+
+### Alternative: Deploy to Netlify
+
+1. Push your code to GitHub
+2. Go to [netlify.com](https://netlify.com) and import your repository
+3. Configure build:
+   - Build command: `npm run build`
+   - Publish directory: `.next`
+4. Click Deploy - **No environment variables needed!**
+
+### Before Deploying:
+
+1. ✅ Test the build locally: `npm run build`
+2. ✅ Ensure `.env.local` is in `.gitignore` (won't be committed)
+3. ✅ No environment variables needed - users provide their own API keys!
 
 ## License
 
