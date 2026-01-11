@@ -18,6 +18,18 @@ interface Conversation {
   updatedAt: string;
 }
 
+interface EasterEgg {
+  id: string;
+  triggers?: string[]; // Keywords/phrases that trigger this easter egg (case-insensitive) - optional for random eggs
+  type: 'message' | 'image';
+  content: string; // Message text or image URL/data URL
+  title?: string; // Optional title for the easter egg
+  caption?: string; // Optional text/caption to display below image (only for image type)
+  delay?: number; // Optional delay in ms before showing (default: 0)
+  isRandom?: boolean; // If true, this is a random easter egg (not keyword-based)
+  probability?: number; // Probability of triggering (0-1) - only for random eggs
+}
+
 const createInitialConversation = (): Conversation => {
   const now = new Date().toISOString();
   return {
@@ -36,6 +48,211 @@ const createInitialConversation = (): Conversation => {
   };
 };
 
+// EASTER EGGS CONFIGURATION
+// Add your own easter eggs here! You can add images (as file paths, data URLs, or external URLs) or messages.
+// To add an image:
+//   Option 1: Place image in public/images/ folder and use path like '/images/your-image.jpg'
+//   Option 2: Use a data URL (convert image to base64)
+//   Option 3: Use an external URL (https://example.com/image.jpg)
+const EASTER_EGGS: EasterEgg[] = [
+  {
+    id: 'love-you',
+    triggers: ['i love you', 'love you', 'i love emma', 'love emma'],
+    type: 'message',
+    title: '💕',
+    content: 'Aww, that\'s so sweet! Remember, love is a beautiful journey of growth together. 💕',
+    delay: 500,
+  },
+  {
+    id: 'missing-you',
+    triggers: ['i miss', 'miss my', 'missing', 'miss brandon'],
+    type: 'message',
+    title: '💙',
+    content: 'I miss you too baby 💙. I love you - Brandon',
+    delay: 500,
+  },
+  {
+    id: 'first-date',
+    triggers: ['first date', 'first time we met', 'when we first met', 'first kiss'],
+    type: 'message',
+    title: '✨',
+    content: 'Those first moments hold such precious memories! They\'re the foundation of your story together. ✨',
+    delay: 500,
+  },
+  {
+    id: 'surprise',
+    triggers: ['surprise', 'surprised', 'surprise emma', 'surprising'],
+    type: 'message',
+    title: '🎁',
+    content: 'Surprises show thoughtfulness! The best gifts come from the heart. 🎁',
+    delay: 500,
+  },
+  // Add more easter eggs below! Examples:
+  // {
+  //   id: 'custom-image',
+  //   triggers: ['our photo', 'remember this', 'this picture'],
+  //   type: 'image',
+  //   title: '📸 A Special Memory',
+  //   content: '/images/memory.jpg', // Path to image in public/images/ folder
+  //   // OR: content: 'data:image/png;base64,...', // Data URL
+  //   // OR: content: 'https://example.com/image.jpg', // External URL
+  //   delay: 500,
+  // },
+];
+
+// RANDOM EASTER EGGS CONFIGURATION
+// These easter eggs appear randomly every few messages (not based on keywords)
+// Set RANDOM_EGG_FREQUENCY to control how often they appear (every N messages)
+const RANDOM_EGG_FREQUENCY = 3; // Trigger approximately every 3 messages (with some randomness)
+const RANDOM_EGG_PROBABILITY = 0.8; // 40% chance when conditions are met (adjust to make more/less frequent)
+
+const RANDOM_EASTER_EGGS: EasterEgg[] = [
+  {
+    id: 'water-lanterns',
+    type: 'image',
+    title: 'Water Lantern Festival',
+    content: '/images/lanterns.jpg',
+    caption: '6/11/2023',
+    isRandom: true,
+    delay: 800,
+  },
+  {
+    id: 'mirror',
+    type: 'image',
+    title: 'Mirror Selfie',
+    content: '/images/mirror.jpg',
+    caption: '9/25/2023',
+    isRandom: true,
+    delay: 800,
+  },
+  {
+    id: 'getty',
+    type: 'image',
+    title: 'The Getty Museum',
+    content: '/images/getty.jpg',
+    caption: '9/30/2023',
+    isRandom: true,
+    delay: 800,
+  },
+  {
+    id: 'date_party',
+    type: 'image',
+    title: 'Date Party',
+    content: '/images/date_party.jpg',
+    caption: '10/19/2023',
+    isRandom: true,
+    delay: 800,
+  },
+  {
+    id: 'halloween',
+    type: 'image',
+    title: 'Halloween',
+    content: '/images/halloween.jpg',
+    caption: '10/31/2023',
+    isRandom: true,
+    delay: 800,
+  },
+  {
+    id: 'utopia',
+    type: 'image',
+    title: 'Travis Scott Concert',
+    content: '/images/utopia.jpg',
+    caption: '11/5/2023',
+    isRandom: true,
+    delay: 800,
+  },
+  {
+    id: 'flowers',
+    type: 'image',
+    title: 'Flower Fields',
+    content: '/images/flowers.jpg',
+    caption: '4/7/2024',
+    isRandom: true,
+    delay: 800,
+  },
+  {
+    id: 'seattle',
+    type: 'image',
+    title: 'Bainbridge Island',
+    content: '/images/seattle.jpg',
+    caption: '8/10/2024',
+    isRandom: true,
+    delay: 800,
+  },
+  {
+    id: 'hawaii',
+    type: 'image',
+    title: 'Crouching Lion Hike - Hawaii',
+    content: '/images/hawaii_hike.jpg',
+    caption: '9/14/2024',
+    isRandom: true,
+    delay: 800,
+  },
+  {
+    id: 'san_diego',
+    type: 'image',
+    title: 'Elvira - San Diego',
+    content: '/images/hawaii_hike.jpg',
+    caption: '1/13/2025',
+    isRandom: true,
+    delay: 800,
+  },
+  {
+    id: 'potobox',
+    type: 'image',
+    title: 'Potobox',
+    content: '/images/potobox.jpg',
+    caption: '5/17/2025',
+    isRandom: true,
+    delay: 800,
+  },
+  {
+    id: 'horses',
+    type: 'image',
+    title: 'Horseback Riding - Griffith Park',
+    content: '/images/horses.jpg',
+    caption: '5/18/2025',
+    isRandom: true,
+    delay: 800,
+  },
+  {
+    id: 'laguna',
+    type: 'image',
+    title: 'Laguna Beach',
+    content: '/images/laguna_beach.jpg',
+    caption: '6/10/2025',
+    isRandom: true,
+    delay: 800,
+  },
+  {
+    id: 'giants_game',
+    type: 'image',
+    title: 'Giants vs. Dodgers Game',
+    content: '/images/giants_game.jpg',
+    caption: '10/14/2025',
+    isRandom: true,
+    delay: 800,
+  },
+  {
+    id: 'tahoe',
+    type: 'image',
+    title: 'Tahoe Trip',
+    content: '/images/tahoe.jpg',
+    caption: '1/4/2026',
+    isRandom: true,
+    delay: 800,
+  },
+  // Add more random easter eggs below! They'll appear randomly every few messages.
+  // {
+  //   id: 'random-image-1',
+  //   type: 'image',
+  //   title: '🎨',
+  //   content: 'data:image/png;base64,...', // Your image data URL
+  //   isRandom: true,
+  //   delay: 800,
+  // },
+];
+
 export default function ChatInterface() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -46,6 +263,8 @@ export default function ChatInterface() {
   const [userApiKey, setUserApiKey] = useState<string>('');
   const [relationshipContext, setRelationshipContext] = useState<string>('');
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [currentEasterEgg, setCurrentEasterEgg] = useState<EasterEgg | null>(null);
+  const [messageCount, setMessageCount] = useState(0); // Track user messages for random easter eggs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const contextTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -173,6 +392,22 @@ export default function ChatInterface() {
     }
   };
 
+  // Check for keyword-based easter eggs in user message
+  const checkForKeywordEasterEggs = (messageContent: string): EasterEgg | null => {
+    const lowerContent = messageContent.toLowerCase().trim();
+    for (const egg of EASTER_EGGS) {
+      // Skip random easter eggs (they don't have triggers)
+      if (egg.isRandom || !egg.triggers) continue;
+      
+      for (const trigger of egg.triggers) {
+        if (lowerContent.includes(trigger.toLowerCase())) {
+          return egg;
+        }
+      }
+    }
+    return null;
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -182,6 +417,36 @@ export default function ChatInterface() {
       content: input.trim(),
       timestamp: now,
     };
+
+    // Increment message count for random easter eggs
+    setMessageCount((prev) => {
+      const newCount = prev + 1;
+      
+      // Check for keyword-based easter eggs first (higher priority)
+      let easterEgg = checkForKeywordEasterEggs(input.trim());
+      
+      // If no keyword easter egg, check for random easter egg
+      if (!easterEgg && newCount >= RANDOM_EGG_FREQUENCY) {
+        // Add randomness - only check sometimes to avoid being too frequent
+        // Check every N messages OR with a random probability
+        const shouldCheckRandom = newCount % RANDOM_EGG_FREQUENCY === 0 || 
+                                  Math.random() < RANDOM_EGG_PROBABILITY;
+        if (shouldCheckRandom && RANDOM_EASTER_EGGS.length > 0) {
+          const randomIndex = Math.floor(Math.random() * RANDOM_EASTER_EGGS.length);
+          easterEgg = RANDOM_EASTER_EGGS[randomIndex];
+        }
+      }
+
+      // Show easter egg if found (using a ref to avoid closure issues)
+      if (easterEgg) {
+        const delay = easterEgg.delay || 0;
+        setTimeout(() => {
+          setCurrentEasterEgg(easterEgg!);
+        }, delay);
+      }
+      
+      return newCount;
+    });
 
     // Ensure there is an active conversation and compute the messages
     let baseMessages: Message[] = messages;
@@ -432,6 +697,43 @@ export default function ChatInterface() {
           </svg>
         </button>
       </header>
+
+      {/* Easter Egg Modal */}
+      {currentEasterEgg && (
+        <div className="easter-egg-overlay" onClick={() => setCurrentEasterEgg(null)}>
+          <div className="easter-egg-content" onClick={(e) => e.stopPropagation()}>
+            {currentEasterEgg.title && (
+              <div className="easter-egg-title">{currentEasterEgg.title}</div>
+            )}
+            {currentEasterEgg.type === 'image' ? (
+              <>
+                <div className="easter-egg-image-container">
+                  <img 
+                    src={currentEasterEgg.content} 
+                    alt={currentEasterEgg.title || 'Easter Egg'} 
+                    className="easter-egg-image"
+                    onError={(e) => {
+                      console.error('Error loading easter egg image:', currentEasterEgg.content);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+                {currentEasterEgg.caption && (
+                  <div className="easter-egg-caption">{currentEasterEgg.caption}</div>
+                )}
+              </>
+            ) : (
+              <div className="easter-egg-message">{currentEasterEgg.content}</div>
+            )}
+            <button 
+              className="easter-egg-close"
+              onClick={() => setCurrentEasterEgg(null)}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Context Modal */}
       {showContextModal && (
@@ -1532,6 +1834,132 @@ export default function ChatInterface() {
           }
         }
 
+        .easter-egg-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+          animation: fadeIn 0.3s ease-in;
+          backdrop-filter: blur(4px);
+        }
+
+        .easter-egg-content {
+          position: relative;
+          background: linear-gradient(135deg, #fff 0%, #f5f7fa 100%);
+          border-radius: 1.5rem;
+          width: 90%;
+          max-width: 500px;
+          padding: 2.5rem 2rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          animation: easterEggPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+          border: 2px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .easter-egg-title {
+          font-size: 3rem;
+          margin-bottom: 1.5rem;
+          animation: bounce 1s ease-in-out infinite;
+          text-align: center;
+        }
+
+        .easter-egg-message {
+          font-size: 1.125rem;
+          line-height: 1.8;
+          color: #2d3748;
+          text-align: center;
+          padding: 1rem;
+          background: white;
+          border-radius: 0.75rem;
+          border: 1px solid rgba(102, 126, 234, 0.1);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .easter-egg-image-container {
+          width: 100%;
+          max-width: 400px;
+          margin: 0 auto;
+          border-radius: 1rem;
+          overflow: hidden;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .easter-egg-image {
+          width: 100%;
+          height: auto;
+          display: block;
+          object-fit: cover;
+        }
+
+        .easter-egg-caption {
+          font-size: 1.125rem;
+          line-height: 1.8;
+          color: #2d3748;
+          text-align: center;
+          padding: 1.25rem 1rem 0 1rem;
+          margin-top: 0.5rem;
+          max-width: 100%;
+        }
+
+        .easter-egg-close {
+          position: absolute;
+          top: 1rem;
+          right: 1rem;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          color: #718096;
+          font-size: 1.25rem;
+          line-height: 1;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .easter-egg-close:hover {
+          background: white;
+          color: #2d3748;
+          transform: scale(1.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        @keyframes easterEggPop {
+          0% {
+            opacity: 0;
+            transform: scale(0.5) rotate(-10deg);
+          }
+          50% {
+            transform: scale(1.05) rotate(5deg);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+          }
+        }
+
+        @keyframes bounce {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-10px);
+          }
+        }
+
         @media (max-width: 768px) {
           .chat-root {
             flex-direction: column;
@@ -1570,6 +1998,25 @@ export default function ChatInterface() {
           .modal-content {
             width: 95%;
             max-height: 90vh;
+          }
+
+          .easter-egg-content {
+            width: 95%;
+            padding: 2rem 1.5rem;
+          }
+
+          .easter-egg-title {
+            font-size: 2.5rem;
+          }
+
+          .easter-egg-message {
+            font-size: 1rem;
+            padding: 0.875rem;
+          }
+
+          .easter-egg-caption {
+            font-size: 1rem;
+            padding: 1rem 0.875rem 0 0.875rem;
           }
         }
       `}</style>
