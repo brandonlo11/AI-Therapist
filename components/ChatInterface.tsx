@@ -999,9 +999,7 @@ export default function ChatInterface() {
         .chat-root {
           display: flex;
           height: 100vh;
-          max-width: 1100px;
-          margin: 0 auto;
-          width: 100%;
+          width: 100vw;
         }
 
         .chat-sidebar {
