@@ -274,6 +274,8 @@ export default function ChatInterface() {
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const [currentEasterEgg, setCurrentEasterEgg] = useState<EasterEgg | null>(null);
   const [messageCount, setMessageCount] = useState(0); // Track user messages for random easter eggs
+  const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const contextTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -629,6 +631,47 @@ export default function ChatInterface() {
     });
   };
 
+  const handleStartRename = (id: string, currentTitle: string) => {
+    setEditingConversationId(id);
+    setEditingTitle(currentTitle);
+  };
+
+  const handleSaveRename = () => {
+    if (!editingConversationId) return;
+    
+    const newTitle = editingTitle.trim() || 'New chat';
+    setConversations((prev) => {
+      const idx = prev.findIndex((c) => c.id === editingConversationId);
+      if (idx === -1) return prev;
+      const conv = prev[idx];
+      const updatedConv: Conversation = {
+        ...conv,
+        title: newTitle,
+        updatedAt: new Date().toISOString(),
+      };
+      const updated = [...prev];
+      updated[idx] = updatedConv;
+      return updated;
+    });
+    setEditingConversationId(null);
+    setEditingTitle('');
+  };
+
+  const handleCancelRename = () => {
+    setEditingConversationId(null);
+    setEditingTitle('');
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveRename();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancelRename();
+    }
+  };
+
   return (
     <div className="chat-root">
       {/* Sidebar */}
@@ -641,27 +684,54 @@ export default function ChatInterface() {
         </div>
         <div className="sidebar-list">
           {conversations.map((conv) => (
-            <button
+            <div
               key={conv.id}
               className={`sidebar-item ${
                 conv.id === activeConversationId ? 'sidebar-item-active' : ''
               }`}
-              onClick={() => handleSelectConversation(conv.id)}
+              onClick={() => editingConversationId !== conv.id && handleSelectConversation(conv.id)}
             >
-              <span className="sidebar-item-title">
-                {conv.title || 'New chat'}
-              </span>
-              <button
-                className="sidebar-item-delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteConversation(conv.id);
-                }}
-                title="Delete chat"
-              >
-                🗑
-              </button>
-            </button>
+              {editingConversationId === conv.id ? (
+                <input
+                  type="text"
+                  className="sidebar-item-input"
+                  value={editingTitle}
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  onKeyDown={handleRenameKeyDown}
+                  onBlur={handleSaveRename}
+                  autoFocus
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <>
+                  <span className="sidebar-item-title">
+                    {conv.title || 'New chat'}
+                  </span>
+                  <div className="sidebar-item-actions">
+                    <button
+                      className="sidebar-item-edit"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartRename(conv.id, conv.title);
+                      }}
+                      title="Rename chat"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      className="sidebar-item-delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteConversation(conv.id);
+                      }}
+                      title="Delete chat"
+                    >
+                      🗑
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           ))}
         </div>
       </aside>
@@ -1093,29 +1163,60 @@ export default function ChatInterface() {
           flex: 1;
         }
 
+        .sidebar-item-actions {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          opacity: 0;
+          transition: all 0.2s;
+        }
+
+        .sidebar-item:hover .sidebar-item-actions {
+          opacity: 1;
+        }
+
+        .sidebar-item-edit,
         .sidebar-item-delete {
           border: none;
           background: transparent;
           color: #a0aec0;
           cursor: pointer;
-          font-size: 0.875rem;
+          font-size: 0.75rem;
           padding: 0.25rem;
-          margin-left: 0.5rem;
           border-radius: 0.25rem;
-          opacity: 0;
           transition: all 0.2s;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
-        .sidebar-item:hover .sidebar-item-delete {
-          opacity: 1;
+        .sidebar-item-edit:hover {
+          background: rgba(102, 126, 234, 0.1);
+          color: #667eea;
         }
 
         .sidebar-item-delete:hover {
           background: rgba(229, 62, 62, 0.1);
           color: #e53e3e;
+        }
+
+        .sidebar-item-input {
+          flex: 1;
+          border: 1px solid rgba(102, 126, 234, 0.4);
+          background: white;
+          color: #2d3748;
+          padding: 0.375rem 0.5rem;
+          border-radius: 0.375rem;
+          font-size: 0.875rem;
+          font-family: inherit;
+          outline: none;
+          width: 100%;
+          box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+        }
+
+        .sidebar-item-input:focus {
+          border-color: #667eea;
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
         }
 
         .chat-container {
