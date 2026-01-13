@@ -761,8 +761,8 @@ export default function ChatInterface() {
             </svg>
           </div>
           <div>
-            <h1>Emma's Relationship Coach</h1>
-            <p>Your personal guide for relationships and emotional growth</p>
+            <h1>Emma's Relationship Chatbot</h1>
+            <p>Tailored relationship advice for the one and only Emma Modelska Pfister</p>
           </div>
         </div>
         <button 
